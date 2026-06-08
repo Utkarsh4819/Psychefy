@@ -1,0 +1,15 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment variables / Secrets
+.env
+
+# Python caching
+__pycache__/
+*.pyc
+
+# Data & Insights output
+PlaylistData.csv
+playlist_insights_dashboard.png
