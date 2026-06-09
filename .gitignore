@@ -9,7 +9,7 @@ env/
 # Python caching
 __pycache__/
 *.pyc
-.cache
+.cache/
 
 # Data & Insights output
 PlaylistData.csv
