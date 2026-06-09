@@ -130,7 +130,7 @@ def get_playlist(playlist_id):
             "Duration":track_length,
             "ID":track_ids,
             "Release Date":release_date,
-            "Added At":added_at_date
+            "Added At":added_at_date,
         }    
 
         df=pd.DataFrame(data)
