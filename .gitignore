@@ -14,3 +14,7 @@ __pycache__/
 # Data & Insights output
 PlaylistData.csv
 playlist_insights_dashboard.png
+
+# Spotipy authentication cache files
+.cache
+.cache-*
