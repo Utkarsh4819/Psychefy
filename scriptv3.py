@@ -10,8 +10,9 @@ import seaborn as sns
 import streamlit as st
 
 #Page Configuration
-st.set_page_config(page_title="Spotify Playlist Analyzer", page_icon="🎵", layout="wide")
-st.title("🎵 Spotify Playlist Vibe & Data Analyzer")
+st.set_page_config(page_title="Psychefy", page_icon="🎵", layout="wide")
+st.title("Psychefy")
+st.header("🎵 Spotify Playlist Vibe & Data Analyzer")
 
 client_Id=os.environ.get("client_Id")
 client_secret=os.environ.get("client_secret")
@@ -85,6 +86,7 @@ def playlist_Id_extract(url):  #Scraps Playlist Id from URLs/Links
         return playlist_id
     return None
 
+@st.cache_data
 def get_playlist(playlist_id):
     offset=0
     track_name=[]
@@ -148,7 +150,7 @@ def get_playlist(playlist_id):
             return None
     
 def playlist_analysis(PlaylistData):
-    print(PlaylistData)
+    #print(PlaylistData)
     total_tracks=len(PlaylistData)
     total_duration_in_minutes=(PlaylistData["Duration"].sum())/(1000*60)
     average_track_duration_in_minutes=total_duration_in_minutes/total_tracks
@@ -292,31 +294,101 @@ def data_visualization(PlaylistData):
 
 def main():
 
-    print("""
-          1. Analyze My Playlists
-          2. Analyze Playlist URL
-          """)
-    
-    choice=int(input("Enter your choice: "))
-    if choice==1:
-        playlist_id=list_playlists()
+    choice = st.radio("Choose Playlist Source:", ("Analyze My Playlists", "Analyze Playlist URL"), horizontal=True)
+    playlist_id = None
+    if choice=="Analyze My Playlists":
+        with st.spinner("Fetching your Spotify account playlists...."):
+            try:
+                playlist_list=list_playlists()
+                if not playlist_list.empty:
+                    playlist_options = playlist_list.set_index("Name")["Playlist_Id"].to_dict()
+                    selected_playlist_name = st.selectbox("Select a Playlist to analyze:", list(playlist_options.keys()))
+                    playlist_id = playlist_options[selected_playlist_name]
+                else:   
+                     st.warning("No playlists parsed from your account metadata profile.")
 
-    elif choice==2:
-        playlist_id=playlist_Id_extract()
-
+            except Exception as e:
+                st.error(f"Failed to access your playlists: {e}")  
     else:
-        print("Invalid Choice t-t")    
+        url_input = st.text_input("Enter Playlist Link here:", placeholder="https://open.spotify.com/playlist/...")
+        if url_input:
+            extracted_id = playlist_Id_extract(url_input)
+            if extracted_id:
+                playlist_id = extracted_id
+            else:
+                st.error("❌ Invalid Spotify Playlist URL format.")           
+
 
     if playlist_id:
-        print("\n" + "="*20)
-        print(" ✨  PLAYLIST   ✨")
-        print("="*20 + "\n")
-        PlaylistData = get_playlist(playlist_id)
-        
-        # Guard clause: only analyze if data was successfully fetched
-        if PlaylistData is not None:
-            playlist_analysis(PlaylistData)
-            data_visualization(PlaylistData)
-            playlist_analysis_ai(PlaylistData)
+        if st.button("🚀 Run Comprehensive Analysis", type="primary"):
+             with st.spinner("Processing tracks, cover arts, and metric evaluations..."):
+                PlaylistData = get_playlist(playlist_id)
 
+                if PlaylistData is not None and not PlaylistData.empty:
+                    st.success("✅ Complete Playlist Data synchronized!")
+                
+                    #SECTION-1: Structural Metadata Summaries
+                    st.header("📊 Playlist Structural Metadata Analysis")
+                    metrics = playlist_analysis(PlaylistData)
+                    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+                    m_col1.metric("Total Tracks", metrics["Total Tracks"])
+                    m_col2.metric("Total Duration (Mins)", metrics["Total Duration (Mins)"])
+                    m_col3.metric("Unique Artists", metrics["Unique Artists"])
+                    m_col4.metric("Dominant Era", metrics["Dominant Music Era"])
+                    
+                    df_metrics = pd.DataFrame.from_dict(metrics, orient='index', columns=["Metrics"])
+                    st.dataframe(df_metrics,width="stretch")
+
+
+                    # SECTION-2: Clean Row-by-Row Track List (Spotify Client Aesthetic)
+                    st.header("🎵 Tracklist & Cover Art Details")
+                    with st.container(height=500, border=True):
+                
+                        h_col1, h_col2, h_col3, h_col4, h_col5 = st.columns([0.5, 0.8, 3, 3, 3])
+                        h_col1.markdown("**#**")
+                        h_col2.markdown("**Cover**")
+                        h_col3.markdown("**Title**")
+                        h_col4.markdown("**Artist**")
+                        h_col5.markdown("**Album**")
+                        st.markdown("---")
+                        
+                        for idx, row in PlaylistData.iterrows():
+                            r_col1, r_col2, r_col3, r_col4, r_col5 = st.columns([0.5, 0.8, 3, 3, 3])
+                            r_col1.write(f"{idx}")
+                            
+                            with r_col2:
+                                if row["Cover Art"]:
+                                    st.image(row["Cover Art"], width=50)
+                                else:
+                                    st.text("🖼️")
+                                    
+                            r_col3.markdown(f"**{row['Track']}**")
+                            r_col4.write(row['Artist'])
+                            r_col5.write(row['Album'])
+                            
+                            # Subdued divider separating list elements
+                            st.markdown("<hr style='margin: 4px 0px; border-color: rgba(49, 51, 63, 0.2);'>", unsafe_allow_html=True)
+                    
+
+                    # SECTION-3: Visual Analytics Charts Plotting
+                    st.header("📈 Data Visualization Dashboard")
+                    analytics_fig = data_visualization(PlaylistData)
+                    st.pyplot(analytics_fig)
+                    
+                    # SECTION-4: AI Text Insights Vibe Engine
+                    st.header("🔮 AI Vibe Check Insight")
+                    vibe_feedback = playlist_analysis_ai(PlaylistData)
+                    st.info(vibe_feedback)
+                    
+                    # Data Pipeline Export Downloader Element
+                    st.download_button(
+                        label="📥 Download Clean Playlist Dataset (CSV)",
+                        data=PlaylistData.to_csv().encode('utf-8'),
+                        file_name="PlaylistData.csv",
+                        mime="text/csv"
+                    )
+                else:
+                    st.warning("No tracking values could be retrieved for this target list selection.")
+   
+        
 main()
