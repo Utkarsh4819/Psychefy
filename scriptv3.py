@@ -11,6 +11,23 @@ import streamlit as st
 
 #Page Configuration
 st.set_page_config(page_title="Psychefy", page_icon="🎵", layout="wide")
+st.markdown("""
+    <style>
+    .profile-pic {
+        border-radius: 50%;
+        width: 180px;
+        height: 180px;
+        object-fit: cover;
+        margin-bottom: 10px;
+        border: 2px solid #1DB954;
+    }
+    .user-name {
+        font-weight: bold;
+        font-size: 30px;
+        margin-bottom: 20px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 st.title("Psychefy")
 st.header("🎵 Spotify Playlist Vibe & Data Analyzer")
 
@@ -35,6 +52,51 @@ sp=get_spotify_client()
 if not sp:
     st.error("❌ Spotify API Credentials missing! Please verify your environment variables or .env file mapping.")
     st.stop()
+try:
+    user_info = sp.current_user()
+    user_name = user_info.get("display_name", "Spotify User")
+    
+    # Extracting total followers count
+    followers_count = user_info.get("followers", {}).get("total", 0)
+
+    # Grabbing the highest resolution profile pic available, fallback if none exists
+    images = user_info.get("images", [])
+    pfp_url = images[0]["url"] if images else "https://www.scdn.co/images/talk/default-avatar.png"
+
+    with st.sidebar:
+        # Profile Picture & Name
+        st.markdown(f'<img src="{pfp_url}" class="profile-pic">', unsafe_allow_html=True)
+        st.markdown(f'<div class="user-name">Hello, {user_name}! 👋</div>', unsafe_allow_html=True)
+        
+        # New Feature: Connected Status & Followers Badge
+        st.markdown(
+            f"""
+            <div style="margin-top: -15px; margin-bottom: 20px; font-size: 14px;">
+                <span style="color: #1DB954; font-weight: bold;">●</span> 
+                <span style="color: #A7A7A7; margin-right: 15px;">Connected</span>
+                <span style="color: #A7A7A7;">👥 <b>{followers_count:,}</b> followers</span>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+        
+        st.markdown("---")
+        
+        # About Section
+        st.markdown("### 🧠 About Psychefy")
+        st.markdown(
+            """
+            **Psychefy** deconstructs your listening habits, timelines, and sonic attributes to decode your curation identity and produce an AI vibe portrait. 
+            
+            * 📊 **Structural Analytics:** Breaks down track durations, dominant decades, and unique artists.
+            * 📈 **Fixation Timelines:** visualizes exactly when you hyper-fixated on specific sounds.
+            * 🔮 **AI Vibe Check:** Diagnoses the underlying narrative and psychological profile behind your curation.
+            """
+        )
+        st.markdown("---")
+        
+except Exception as e:
+    st.sidebar.error("Could not load Spotify Profile data.")
 
 def list_playlists():
     offset=0
